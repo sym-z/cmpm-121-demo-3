@@ -32,15 +32,15 @@ leaflet
   })
   .addTo(map);
 
-// Add a marker to represent the player
+// Add a marker to represent the player, keep track of their location and what coins are in their wallet.
 const playerMarker = leaflet.marker(OAKES_CLASSROOM);
 const playerLocation: Cell = { i: 0, j: 0 };
 playerMarker.bindTooltip(
   `You are currently located at: ${playerLocation.i}, ${playerLocation.j}`,
 );
 playerMarker.addTo(map);
-
 const playerWallet: Coin[] = [];
+
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No points yet...";
 
@@ -48,7 +48,6 @@ interface Cell {
   i: number;
   j: number;
 }
-
 interface Coin {
   cell: Cell;
   serial: string;
@@ -67,13 +66,14 @@ function deposit(coin: Coin, cache: Cache) {
   cache.coins.push(coin);
   playerWallet.splice(playerWallet.length - 1, 1);
 }
-
+// Makes a coin and deposits it into a cache
 function makeCoin(cache: Cache) {
   const serialNumber: string = `${cache.i}:${cache.j}#${cache.coins.length}`;
   const coin: Coin = { cell: { i: cache.i, j: cache.j }, serial: serialNumber };
   cache.coins.push(coin);
 }
 
+// Create a representation of a new cache object on the map.
 function spawnCache(cache: Cache) {
   const origin = OAKES_CLASSROOM;
   const bounds = leaflet.latLngBounds([
@@ -83,24 +83,27 @@ function spawnCache(cache: Cache) {
       origin.lng + (cache.j + 1) * TILE_DEGREES,
     ],
   ]);
-
+  // Calculate the starting number of coins for each cache.
   const totalCoins = Math.floor(
     luck([cache.i, cache.j, "initialValue"].toString()) * 100,
   );
+  // Make and deposit that many coins into the cache
   for (let i = 0; i < totalCoins; i++) {
     makeCoin(cache);
   }
+  // Create a border around the cache on the map.
   const rect = leaflet.rectangle(bounds);
   rect.addTo(map);
 
+  // Each cache's popup behavior.
   rect.bindPopup(() => {
     // The popup offers a description and button
     const popupDiv = document.createElement("div");
     popupDiv.innerHTML = `
-                <div>There is a cache here at "${cache.i},${cache.j}". It has value <span id="value">${totalCoins}</span>.</div>
+                <div>There is a cache here at "${cache.i},${cache.j}". It contains <span id="value">${totalCoins}</span> coins.</div>
                 <button id="add">Add Coins</button>
                 <button id="sub">Take Coins</button>`;
-
+    // Deposit coins into the cache and remove them from the player's wallet when the add button is clicked.
     popupDiv
       .querySelector<HTMLButtonElement>("#add")!
       .addEventListener("click", () => {
@@ -111,7 +114,7 @@ function spawnCache(cache: Cache) {
           .coins.length.toString();
         statusPanel.innerHTML = `${playerWallet.length} points currently`;
       });
-
+    // Remove coins from the cache and add them to the player's wallet when the add button is clicked.
     popupDiv
       .querySelector<HTMLButtonElement>("#sub")!
       .addEventListener("click", () => {
@@ -130,6 +133,7 @@ for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
   for (let j = -NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
     // If location i,j is lucky enough, spawn a cache!
     if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
+      // Pass in parameters within a Cache object.
       spawnCache({ i: i, j: j, coins: [] });
     }
   }
