@@ -36,7 +36,9 @@ leaflet
 const playerMarker = leaflet.marker(OAKES_CLASSROOM);
 const playerLocation: Cell = { i: 0, j: 0 };
 playerMarker.bindTooltip(
-  `You are currently located at: ${playerLocation.i}, ${playerLocation.j}`,
+  `You are currently located at: ${
+    OAKES_CLASSROOM.lat + playerLocation.i * TILE_DEGREES
+  }, ${OAKES_CLASSROOM.lng + playerLocation.j * TILE_DEGREES}`,
 );
 playerMarker.addTo(map);
 const playerWallet: Coin[] = [];
@@ -100,7 +102,11 @@ function spawnCache(cache: Cache) {
     // The popup offers a description and button
     const popupDiv = document.createElement("div");
     popupDiv.innerHTML = `
-                <div>There is a cache here at "${cache.i},${cache.j}". It contains <span id="value">${totalCoins}</span> coins.</div>
+                <div>There is a cache here at "${
+      origin.lat + cache.i * TILE_DEGREES
+    },${
+      origin.lng + cache.j * TILE_DEGREES
+    }". It contains <span id="value">${cache.coins.length}</span> coins.</div>
                 <button id="add">Add Coins</button>
                 <button id="sub">Take Coins</button>`;
     // Deposit coins into the cache and remove them from the player's wallet when the add button is clicked.
