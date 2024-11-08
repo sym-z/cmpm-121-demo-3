@@ -1,3 +1,6 @@
+/*
+    Code in this section was inspired by Professor Smith's flyweight example.
+*/
 import leaflet from "leaflet";
 
 import "leaflet/dist/leaflet.css";
