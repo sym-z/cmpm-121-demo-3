@@ -1,3 +1,6 @@
+// Many ideas for constants and algorithmic flow from Professor Smith's example.ts and example.html.
+import { Cell } from "./board.ts";
+import { Board } from "./board.ts";
 import leaflet from "leaflet";
 
 import "leaflet/dist/leaflet.css";
@@ -8,7 +11,6 @@ import "./leafletWorkaround.ts";
 import luck from "./luck.ts";
 
 const OAKES_CLASSROOM = leaflet.latLng(36.98949379578401, -122.06277128548504);
-
 // Tunable gameplay parameters
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
@@ -34,11 +36,13 @@ leaflet
 
 // Add a marker to represent the player, keep track of their location and what coins are in their wallet.
 const playerMarker = leaflet.marker(OAKES_CLASSROOM);
-const playerLocation: Cell = { i: 0, j: 0 };
+const startingLocation: Cell = {
+  i: Math.floor(OAKES_CLASSROOM.lat / TILE_DEGREES),
+  j: Math.floor(OAKES_CLASSROOM.lng / TILE_DEGREES),
+};
+const playerCellLocation: Cell = startingLocation;
 playerMarker.bindTooltip(
-  `You are currently located at: ${
-    OAKES_CLASSROOM.lat + playerLocation.i * TILE_DEGREES
-  }, ${OAKES_CLASSROOM.lng + playerLocation.j * TILE_DEGREES}`,
+  `You are currently located at: ${playerCellLocation.i}, ${playerCellLocation.j}`,
 );
 playerMarker.addTo(map);
 const playerWallet: Coin[] = [];
@@ -46,10 +50,6 @@ const playerWallet: Coin[] = [];
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No points yet...";
 
-interface Cell {
-  i: number;
-  j: number;
-}
 interface Coin {
   cell: Cell;
   serial: string;
@@ -74,17 +74,16 @@ function makeCoin(cache: Cache) {
   const coin: Coin = { cell: { i: cache.i, j: cache.j }, serial: serialNumber };
   cache.coins.push(coin);
 }
-
+function printInventory(coins: Coin[]) {
+  let inventoryString: string = "\n";
+  for (const coin of coins) {
+    inventoryString += coin.serial + "\n";
+  }
+  return inventoryString;
+}
+const board: Board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 // Create a representation of a new cache object on the map.
 function spawnCache(cache: Cache) {
-  const origin = OAKES_CLASSROOM;
-  const bounds = leaflet.latLngBounds([
-    [origin.lat + cache.i * TILE_DEGREES, origin.lng + cache.j * TILE_DEGREES],
-    [
-      origin.lat + (cache.i + 1) * TILE_DEGREES,
-      origin.lng + (cache.j + 1) * TILE_DEGREES,
-    ],
-  ]);
   // Calculate the starting number of coins for each cache.
   const totalCoins = Math.floor(
     luck([cache.i, cache.j, "initialValue"].toString()) * 100,
@@ -94,6 +93,7 @@ function spawnCache(cache: Cache) {
     makeCoin(cache);
   }
   // Create a border around the cache on the map.
+  const bounds = board.getCellBounds(cache);
   const rect = leaflet.rectangle(bounds);
   rect.addTo(map);
 
@@ -102,11 +102,9 @@ function spawnCache(cache: Cache) {
     // The popup offers a description and button
     const popupDiv = document.createElement("div");
     popupDiv.innerHTML = `
-                <div>There is a cache here at "${
-      origin.lat + cache.i * TILE_DEGREES
-    },${
-      origin.lng + cache.j * TILE_DEGREES
-    }". It contains <span id="value">${cache.coins.length}</span> coins.</div>
+                <div>There is a cache here at "${cache.i},${cache.j}". It contains <span id="value">${cache.coins.length}</span> coins. <span id="inventory">${
+      printInventory(cache.coins)
+    }</span></div>
                 <button id="add">Add Coins</button>
                 <button id="sub">Take Coins</button>`;
     // Deposit coins into the cache and remove them from the player's wallet when the add button is clicked.
@@ -118,7 +116,12 @@ function spawnCache(cache: Cache) {
         }
         popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = cache
           .coins.length.toString();
-        statusPanel.innerHTML = `${playerWallet.length} points currently`;
+        popupDiv.querySelector<HTMLSpanElement>("#inventory")!.innerHTML =
+          printInventory(cache.coins);
+        statusPanel.innerHTML =
+          `${playerWallet.length} points currently, player deposited coin ${
+            cache.coins[cache.coins.length - 1].serial
+          }`;
       });
     // Remove coins from the cache and add them to the player's wallet when the add button is clicked.
     popupDiv
@@ -129,18 +132,20 @@ function spawnCache(cache: Cache) {
         }
         popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = cache
           .coins.length.toString();
-        statusPanel.innerHTML = `${playerWallet.length} points currently`;
+        popupDiv.querySelector<HTMLSpanElement>("#inventory")!.innerHTML =
+          printInventory(cache.coins);
+        statusPanel.innerHTML =
+          `${playerWallet.length} points currently, player picked up coin: ${
+            playerWallet[playerWallet.length - 1].serial
+          }\n Player Inventory: ${printInventory(playerWallet)}`;
       });
     return popupDiv;
   });
 }
-// Look around the player's neighborhood for caches to spawn
-for (let i = -NEIGHBORHOOD_SIZE; i < NEIGHBORHOOD_SIZE; i++) {
-  for (let j = -NEIGHBORHOOD_SIZE; j < NEIGHBORHOOD_SIZE; j++) {
-    // If location i,j is lucky enough, spawn a cache!
-    if (luck([i, j].toString()) < CACHE_SPAWN_PROBABILITY) {
-      // Pass in parameters within a Cache object.
-      spawnCache({ i: i, j: j, coins: [] });
-    }
+// Create initial caches that surround the player.
+const nearbyCells = board.getCellsNearPoint(OAKES_CLASSROOM);
+for (const cell of nearbyCells) {
+  if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
+    spawnCache({ i: cell.i, j: cell.j, coins: [] });
   }
 }
