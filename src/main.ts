@@ -38,17 +38,20 @@ interface Coin {
   cell: Cell;
   serial: string;
 }
-interface Cache extends Cell {
+interface Cache {
+  cell: Cell;
   coins: Coin[];
 }
 
+// Create a board object to use to implement the Flyweight pattern
+const board: Board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
+
+// This location will eventually be updated based on the user's real location, for now the player will always start at the Oakes Classroom
+const playerCoordLocation = OAKES_CLASSROOM;
+// Create a cell representation of the player's location
+const playerCellLocation: Cell = board.getCellForPoint(playerCoordLocation);
 // Add a marker to represent the player, keep track of their location and what coins are in their wallet.
-const playerMarker = leaflet.marker(OAKES_CLASSROOM);
-const startingLocation: Cell = {
-  i: Math.floor(OAKES_CLASSROOM.lat / TILE_DEGREES),
-  j: Math.floor(OAKES_CLASSROOM.lng / TILE_DEGREES),
-};
-const playerCellLocation: Cell = startingLocation;
+const playerMarker = leaflet.marker(playerCoordLocation);
 playerMarker.bindTooltip(
   `You are currently located at: ${playerCellLocation.i}, ${playerCellLocation.j}`,
 );
@@ -67,8 +70,12 @@ function deposit(coin: Coin, cache: Cache) {
 }
 // Makes a coin and deposits it into a cache
 function makeCoin(cache: Cache) {
-  const serialNumber: string = `${cache.i}:${cache.j}#${cache.coins.length}`;
-  const coin: Coin = { cell: { i: cache.i, j: cache.j }, serial: serialNumber };
+  const serialNumber: string =
+    `${cache.cell.i}:${cache.cell.j}#${cache.coins.length}`;
+  const coin: Coin = {
+    cell: { i: cache.cell.i, j: cache.cell.j },
+    serial: serialNumber,
+  };
   cache.coins.push(coin);
 }
 // Prints the current state of a coin array, in a scroll box.
@@ -81,9 +88,11 @@ function printInventory(coins: Coin[]) {
   inventoryString += "</ul></div></details>";
   return inventoryString;
 }
+
 // Shows recent coin deposits and pickups
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No points yet...";
+
 // Shows the player's coin inventory.
 const inventoryPanel = document.querySelector<HTMLDivElement>(
   "#inventoryPanel",
@@ -92,18 +101,17 @@ inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
   printInventory(playerWallet)
 }`;
 
-const board: Board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 // Draws a Cache to the screen
 function drawCache(cache: Cache) {
   // Create a border around the cache on the map.
-  const rect = leaflet.rectangle(board.getCellBounds(cache));
+  const rect = leaflet.rectangle(board.getCellBounds(cache.cell));
   rect.addTo(map);
   // Each cache's popup behavior.
   rect.bindPopup(() => {
     // The popup offers a description and button
     const popupDiv = document.createElement("div");
     popupDiv.innerHTML = `
-                <div>There is a cache here at "${cache.i},${cache.j}". It contains <span id="value">${cache.coins.length}</span> coins. <span id="inventory"><h3>Cache's Current Inventory</h3>\n${
+                <div>There is a cache here at "${cache.cell.i},${cache.cell.j}". It contains <span id="value">${cache.coins.length}</span> coins. <span id="inventory"><h3>Cache's Current Inventory</h3>\n${
       printInventory(cache.coins)
     }</span></div>
                 <button id="add">Deposit Coins</button>
@@ -142,7 +150,7 @@ function drawCache(cache: Cache) {
     return popupDiv;
   });
 }
-// Refreshes the cache's tooltip to reflect its inventory.
+// Refreshes the cache's tooltip to reflect its inventory after a transaction.
 function refreshCacheTooltip(
   cache: Cache,
   popupDiv: HTMLDivElement,
@@ -162,7 +170,7 @@ function refreshCacheTooltip(
 function spawnCache(cache: Cache) {
   // Calculate the starting number of coins for each cache.
   const totalCoins = Math.floor(
-    luck([cache.i, cache.j, "initialValue"].toString()) * 100,
+    luck([cache.cell.i, cache.cell.j, "initialValue"].toString()) * 100,
   );
   // Make and deposit that many coins into the cache
   for (let i = 0; i < totalCoins; i++) {
@@ -172,9 +180,10 @@ function spawnCache(cache: Cache) {
 }
 
 // Create initial caches that surround the player.
-const nearbyCells = board.getCellsNearPoint(OAKES_CLASSROOM);
+const nearbyCells = board.getCellsNearPoint(playerCoordLocation);
 for (const cell of nearbyCells) {
+  // If the cell is lucky enough, spawn a cache.
   if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
-    spawnCache({ i: cell.i, j: cell.j, coins: [] });
+    spawnCache({ cell: cell, coins: [] });
   }
 }

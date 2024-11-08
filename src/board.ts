@@ -23,7 +23,7 @@ export class Board {
     this.tileVisibilityRadius = tileVisibilityRadius;
     this.knownCells = new Map<string, Cell>();
   }
-
+  // Pulls a cell from the Map if it exists, creates it and returns it if it doesn't
   private getCanonicalCell(cell: Cell): Cell {
     const { i, j } = cell;
     const key = [i, j].toString();
@@ -34,14 +34,14 @@ export class Board {
       return cell;
     }
   }
-
+  // Returns cell representation of a given point, getCanonicalCell prevents duplicate cells.
   getCellForPoint(point: leaflet.LatLng): Cell {
     return this.getCanonicalCell({
       i: Math.floor(point.lat / this.tileWidth),
       j: Math.floor(point.lng / this.tileWidth),
     });
   }
-
+  // Calculates bounds of a given cell.
   getCellBounds(cell: Cell): leaflet.LatLngBounds {
     return leaflet.latLngBounds([
       [cell.i * this.tileWidth, cell.j * this.tileWidth],
@@ -51,7 +51,7 @@ export class Board {
       ],
     ]);
   }
-
+  // Returns all cells surrounding a given point, using getCanonicalCell() to prevent duplicates.
   getCellsNearPoint(point: leaflet.LatLng): Cell[] {
     const resultCells: Cell[] = [];
     const originCell = this.getCellForPoint(point);
