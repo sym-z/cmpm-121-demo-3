@@ -38,11 +38,43 @@ interface Coin {
   cell: Cell;
   serial: string;
 }
-interface Cache {
+class Cache {
   cell: Cell;
   coins: Coin[];
+  constructor(cell: Cell = { i: 0, j: 0 }, coins: Coin[] = []) {
+    this.cell = cell;
+    this.coins = coins;
+  }
+  toMemento(): string {
+    return JSON.stringify(this);
+  }
+  fromMemento(str: string): void {
+    const newCache = JSON.parse(str) as Cache;
+    this.cell = newCache.cell;
+    this.coins = newCache.coins;
+  }
 }
-
+// Rewrites a memento string after a transaction
+function refreshMemento(cache: Cache) {
+  for (let i = 0; i < seenCaches.length; i++) {
+    const currCache: Cache = JSON.parse(seenCaches[i]);
+    if (cache.cell.i == currCache.cell.i && cache.cell.j == currCache.cell.j) {
+      seenCaches[i] = cache.toMemento();
+    }
+  }
+}
+// Moves coins from cache to player
+function collect(coin: Coin, cache: Cache) {
+  playerWallet.push(coin);
+  cache.coins.splice(cache.coins.length - 1, 1);
+  refreshMemento(cache);
+}
+// Moves coins from player to cache
+function deposit(coin: Coin, cache: Cache) {
+  cache.coins.push(coin);
+  playerWallet.splice(playerWallet.length - 1, 1);
+  refreshMemento(cache);
+}
 // Create a board object to use to implement the Flyweight pattern
 const board: Board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
@@ -77,6 +109,8 @@ function clearRectangles() {
     map.removeLayer(rect);
   }
 }
+// The memento strings of all seen Caches.
+const seenCaches: string[] = [];
 // Redraws all caches to the screen
 function refreshCacheLocations() {
   clearRectangles();
@@ -84,7 +118,23 @@ function refreshCacheLocations() {
   for (const cell of nearbyCells) {
     // If the cell is lucky enough, spawn a cache.
     if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
-      spawnCache({ cell: cell, coins: [] });
+      //TODO: Check to see if cache has already existed
+      let duplicateFound = false;
+      for (const cache of seenCaches) {
+        const currCache: Cache = JSON.parse(cache) as Cache;
+        // Cache has been seen before
+        if (currCache.cell.i == cell.i && currCache.cell.j == cell.j) {
+          const newCache = new Cache();
+          newCache.fromMemento(cache);
+          duplicateFound = true;
+          drawCache(newCache);
+          break;
+        }
+      }
+      if (!duplicateFound) {
+        const newCache = new Cache(cell, []);
+        spawnCache(newCache);
+      }
     }
   }
 }
@@ -118,16 +168,6 @@ eastButton.addEventListener("click", () => {
   document.dispatchEvent(playerMoved);
 });
 
-// Moves coins from cache to player
-function collect(coin: Coin, cache: Cache) {
-  playerWallet.push(coin);
-  cache.coins.splice(cache.coins.length - 1, 1);
-}
-// Moves coins from player to cache
-function deposit(coin: Coin, cache: Cache) {
-  cache.coins.push(coin);
-  playerWallet.splice(playerWallet.length - 1, 1);
-}
 // Makes a coin and deposits it into a cache
 function makeCoin(cache: Cache) {
   const serialNumber: string =
@@ -227,7 +267,6 @@ function refreshCacheTooltip(
     printInventory(playerWallet)
   }`;
 }
-
 // Create a representation of a new cache object on the map.
 function spawnCache(cache: Cache) {
   // Calculate the starting number of coins for each cache.
@@ -239,13 +278,7 @@ function spawnCache(cache: Cache) {
     makeCoin(cache);
   }
   drawCache(cache);
+  seenCaches.push(cache.toMemento());
 }
-
-// Create initial caches that surround the player.
-const nearbyCells = board.getCellsNearPoint(playerCoordLocation);
-for (const cell of nearbyCells) {
-  // If the cell is lucky enough, spawn a cache.
-  if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
-    spawnCache({ cell: cell, coins: [] });
-  }
-}
+// Generate initial caches.
+document.dispatchEvent(playerMoved);
