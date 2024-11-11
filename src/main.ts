@@ -58,12 +58,6 @@ playerMarker.bindTooltip(
 playerMarker.addTo(map);
 const playerWallet: Coin[] = [];
 
-// Movement Button Behavior
-const northButton = document.getElementById("north")!;
-const southButton = document.getElementById("south")!;
-const westButton = document.getElementById("west")!;
-const eastButton = document.getElementById("east")!;
-
 function refreshPlayerLocation() {
   playerMarker.remove();
   playerMarker = leaflet.marker(playerCoordLocation);
@@ -74,10 +68,39 @@ function refreshPlayerLocation() {
   playerCellLocation = board.getCellForPoint(playerCoordLocation);
   map.setView(playerCoordLocation, map.getZoom());
 }
+// Keeps track of all shapes drawn to the screen to handle Cache refresh.
+const drawnRectangles: leaflet.rect[] = [];
+// Clears the screen of all Caches to draw new nearby Caches.
+// Help from Brace on finding the removeLayer function.
+function clearRectangles() {
+  for (const rect of drawnRectangles) {
+    map.removeLayer(rect);
+  }
+}
+// Redraws all caches to the screen
+function refreshCacheLocations() {
+  clearRectangles();
+  const nearbyCells = board.getCellsNearPoint(playerCoordLocation);
+  for (const cell of nearbyCells) {
+    // If the cell is lucky enough, spawn a cache.
+    if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
+      spawnCache({ cell: cell, coins: [] });
+    }
+  }
+}
+// Triggers when a player changes cell.
 const playerMoved = new Event("player-moved");
 document.addEventListener("player-moved", () => {
   refreshPlayerLocation();
+  refreshCacheLocations();
 });
+
+// Movement Button Behavior
+const northButton = document.getElementById("north")!;
+const southButton = document.getElementById("south")!;
+const westButton = document.getElementById("west")!;
+const eastButton = document.getElementById("east")!;
+
 northButton.addEventListener("click", () => {
   playerCoordLocation.lat += TILE_DEGREES;
   document.dispatchEvent(playerMoved);
@@ -143,6 +166,8 @@ function drawCache(cache: Cache) {
   // Create a border around the cache on the map.
   const rect = leaflet.rectangle(board.getCellBounds(cache.cell));
   rect.addTo(map);
+  // Add to list of rectangle Caches drawn to the screen.
+  drawnRectangles.push(rect);
   // Each cache's popup behavior.
   rect.bindPopup(() => {
     // The popup offers a description and button
