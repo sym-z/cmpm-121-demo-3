@@ -1,8 +1,8 @@
 // Many ideas for constants and algorithmic flow from Professor Smith's example.ts and example.html.
 import { Cell } from "./board.ts";
 import { Board } from "./board.ts";
-import leaflet from "leaflet";
 
+import leaflet from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 
@@ -49,14 +49,51 @@ const board: Board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 // This location will eventually be updated based on the user's real location, for now the player will always start at the Oakes Classroom
 const playerCoordLocation = OAKES_CLASSROOM;
 // Create a cell representation of the player's location
-const playerCellLocation: Cell = board.getCellForPoint(playerCoordLocation);
+let playerCellLocation: Cell = board.getCellForPoint(playerCoordLocation);
 // Add a marker to represent the player, keep track of their location and what coins are in their wallet.
-const playerMarker = leaflet.marker(playerCoordLocation);
+let playerMarker = leaflet.marker(playerCoordLocation);
 playerMarker.bindTooltip(
   `You are currently located at: ${playerCellLocation.i}, ${playerCellLocation.j}`,
 );
 playerMarker.addTo(map);
 const playerWallet: Coin[] = [];
+
+// Movement Button Behavior
+const northButton = document.getElementById("north")!;
+const southButton = document.getElementById("south")!;
+const westButton = document.getElementById("west")!;
+const eastButton = document.getElementById("east")!;
+
+function refreshPlayerLocation() {
+  playerMarker.remove();
+  playerMarker = leaflet.marker(playerCoordLocation);
+  playerMarker.bindTooltip(
+    `You are currently located at: ${playerCellLocation.i}, ${playerCellLocation.j}`,
+  );
+  playerMarker.addTo(map);
+  playerCellLocation = board.getCellForPoint(playerCoordLocation);
+  map.setView(playerCoordLocation, map.getZoom());
+}
+const playerMoved = new Event("player-moved");
+document.addEventListener("player-moved", () => {
+  refreshPlayerLocation();
+});
+northButton.addEventListener("click", () => {
+  playerCoordLocation.lat += TILE_DEGREES;
+  document.dispatchEvent(playerMoved);
+});
+southButton.addEventListener("click", () => {
+  playerCoordLocation.lat -= TILE_DEGREES;
+  document.dispatchEvent(playerMoved);
+});
+westButton.addEventListener("click", () => {
+  playerCoordLocation.lng -= TILE_DEGREES;
+  document.dispatchEvent(playerMoved);
+});
+eastButton.addEventListener("click", () => {
+  playerCoordLocation.lng += TILE_DEGREES;
+  document.dispatchEvent(playerMoved);
+});
 
 // Moves coins from cache to player
 function collect(coin: Coin, cache: Cache) {
