@@ -16,6 +16,8 @@ const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
 const NEIGHBORHOOD_SIZE = 8;
 const CACHE_SPAWN_PROBABILITY = 0.1;
+// Calculates the amount of coins in each Cache, using the luck() function.
+const CACHE_COIN_SIZE_MULTIPLIER = 100;
 
 const map = leaflet.map(document.getElementById("map")!, {
   center: OAKES_CLASSROOM,
@@ -38,10 +40,11 @@ interface Coin {
   cell: Cell;
   serial: string;
 }
+
 class Cache {
   cell: Cell;
   coins: Coin[];
-  constructor(cell: Cell = { i: 0, j: 0 }, coins: Coin[] = []) {
+  constructor(cell: Cell, coins: Coin[]) {
     this.cell = cell;
     this.coins = coins;
   }
@@ -53,28 +56,116 @@ class Cache {
     this.cell = newCache.cell;
     this.coins = newCache.coins;
   }
-}
-// Rewrites a memento string after a transaction
-function refreshMemento(cache: Cache) {
-  for (let i = 0; i < seenCaches.length; i++) {
-    const currCache: Cache = JSON.parse(seenCaches[i]);
-    if (cache.cell.i == currCache.cell.i && cache.cell.j == currCache.cell.j) {
-      seenCaches[i] = cache.toMemento();
+  // Rewrites a memento string after a transaction
+  refreshMemento() {
+    for (let i = 0; i < seenCaches.length; i++) {
+      const currCache: Cache = JSON.parse(seenCaches[i]) as Cache;
+      if (this.cell.i == currCache.cell.i && this.cell.j == currCache.cell.j) {
+        seenCaches[i] = this.toMemento();
+      }
     }
   }
+  // Moves coins from cache to player
+  withdraw(coin: Coin) {
+    playerWallet.push(coin);
+    this.coins.splice(this.coins.length - 1, 1);
+    this.refreshMemento();
+  }
+  // Moves coins from player to cache
+  deposit(coin: Coin) {
+    this.coins.push(coin);
+    playerWallet.splice(playerWallet.length - 1, 1);
+    this.refreshMemento();
+  }
+  // Makes a coin and deposits it into a cache
+  makeCoin() {
+    const serialNumber: string =
+      `${this.cell.i}:${this.cell.j}#${this.coins.length}`;
+    const coin: Coin = {
+      cell: this.cell,
+      serial: serialNumber,
+    };
+    this.coins.push(coin);
+  }
+  // Refreshes the cache's tooltip to reflect its inventory after a transaction.
+  refreshCacheTooltip(
+    popupDiv: HTMLDivElement,
+    coin: Coin,
+  ) {
+    popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = this
+      .coins.length.toString();
+    popupDiv.querySelector<HTMLSpanElement>("#inventory")!.innerHTML =
+      `<h3>Cache's Current Inventory</h3>\n${printInventory(this.coins)}`;
+    statusPanel.innerHTML += `${coin.serial}`;
+    inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
+      printInventory(playerWallet)
+    }`;
+  }
+  // Draws a Cache to the screen
+  draw() {
+    // Create a border around the cache on the map.
+    const rect = leaflet.rectangle(board.getCellBounds(this.cell));
+    rect.addTo(map);
+    // Add to list of rectangle Caches drawn to the screen.
+    drawnRectangles.push(rect);
+    // Each cache's popup behavior.
+    rect.bindPopup(() => {
+      // The popup offers a description and button
+      const popupDiv = document.createElement("div");
+      popupDiv.innerHTML = `
+                <div>There is a cache here at "${this.cell.i},${this.cell.j}". It contains <span id="value">${this.coins.length}</span> coins. <span id="inventory"><h3>Cache's Current Inventory</h3>\n${
+        printInventory(this.coins)
+      }</span></div>
+                <button id="add">Deposit Coins</button>
+                <button id="sub">Withdraw Coins</button>
+                `;
+      // Deposit coins into the cache and remove them from the player's wallet when the add button is clicked.
+      popupDiv
+        .querySelector<HTMLButtonElement>("#add")!
+        .addEventListener("click", () => {
+          if (playerWallet.length > 0) {
+            this.deposit(playerWallet[playerWallet.length - 1]);
+            statusPanel.innerHTML =
+              `${playerWallet.length} points currently, player deposited coin: `;
+            this.refreshCacheTooltip(
+              popupDiv,
+              this.coins[this.coins.length - 1],
+            );
+          }
+        });
+      // Remove coins from the cache and add them to the player's wallet when the add button is clicked.
+      popupDiv
+        .querySelector<HTMLButtonElement>("#sub")!
+        .addEventListener("click", () => {
+          if (this.coins.length > 0) {
+            this.withdraw(this.coins[this.coins.length - 1]);
+            statusPanel.innerHTML =
+              `${playerWallet.length} points currently, player picked up coin: `;
+            this.refreshCacheTooltip(
+              popupDiv,
+              playerWallet[playerWallet.length - 1],
+            );
+          }
+        });
+      return popupDiv;
+    });
+  }
+  // Create a representation of a new cache object on the map.
+  spawn() {
+    // Calculate the starting number of coins for each cache.
+    const totalCoins = Math.floor(
+      luck([this.cell.i, this.cell.j, "initialValue"].toString()) *
+        CACHE_COIN_SIZE_MULTIPLIER,
+    );
+    // Make and deposit that many coins into the cache
+    for (let i = 0; i < totalCoins; i++) {
+      this.makeCoin();
+    }
+    this.draw();
+    seenCaches.push(this.toMemento());
+  }
 }
-// Moves coins from cache to player
-function collect(coin: Coin, cache: Cache) {
-  playerWallet.push(coin);
-  cache.coins.splice(cache.coins.length - 1, 1);
-  refreshMemento(cache);
-}
-// Moves coins from player to cache
-function deposit(coin: Coin, cache: Cache) {
-  cache.coins.push(coin);
-  playerWallet.splice(playerWallet.length - 1, 1);
-  refreshMemento(cache);
-}
+
 // Create a board object to use to implement the Flyweight pattern
 const board: Board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
@@ -112,28 +203,28 @@ function clearRectangles() {
 // The memento strings of all seen Caches.
 const seenCaches: string[] = [];
 // Redraws all caches to the screen
+// Got a bit of help from Brace on some syntax for how I declared currCache so I implemented Flyweight effectively still.
 function refreshCacheLocations() {
   clearRectangles();
   const nearbyCells = board.getCellsNearPoint(playerCoordLocation);
   for (const cell of nearbyCells) {
+    let duplicateFound = false;
     // If the cell is lucky enough, spawn a cache.
     if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
-      //TODO: Check to see if cache has already existed
-      let duplicateFound = false;
-      for (const cache of seenCaches) {
-        const currCache: Cache = JSON.parse(cache) as Cache;
+      const currCache: Cache = new Cache(cell, []);
+      for (const cacheMemento of seenCaches) {
+        currCache.fromMemento(cacheMemento);
         // Cache has been seen before
         if (currCache.cell.i == cell.i && currCache.cell.j == cell.j) {
-          const newCache = new Cache();
-          newCache.fromMemento(cache);
           duplicateFound = true;
-          drawCache(newCache);
+          currCache.draw();
           break;
         }
       }
+      // No memento was found for this cache, create a new one.
       if (!duplicateFound) {
         const newCache = new Cache(cell, []);
-        spawnCache(newCache);
+        newCache.spawn();
       }
     }
   }
@@ -168,17 +259,7 @@ eastButton.addEventListener("click", () => {
   document.dispatchEvent(playerMoved);
 });
 
-// Makes a coin and deposits it into a cache
-function makeCoin(cache: Cache) {
-  const serialNumber: string =
-    `${cache.cell.i}:${cache.cell.j}#${cache.coins.length}`;
-  const coin: Coin = {
-    cell: { i: cache.cell.i, j: cache.cell.j },
-    serial: serialNumber,
-  };
-  cache.coins.push(coin);
-}
-// Prints the current state of a coin array, in a scroll box.
+// Prints the current state of a coin array, could be the players wallet or a cache, in a scroll box.
 function printInventory(coins: Coin[]) {
   let inventoryString: string =
     `<details><summary>Click to Open</summary><div class="scroll-box"><ul>`;
@@ -201,84 +282,5 @@ inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
   printInventory(playerWallet)
 }`;
 
-// Draws a Cache to the screen
-function drawCache(cache: Cache) {
-  // Create a border around the cache on the map.
-  const rect = leaflet.rectangle(board.getCellBounds(cache.cell));
-  rect.addTo(map);
-  // Add to list of rectangle Caches drawn to the screen.
-  drawnRectangles.push(rect);
-  // Each cache's popup behavior.
-  rect.bindPopup(() => {
-    // The popup offers a description and button
-    const popupDiv = document.createElement("div");
-    popupDiv.innerHTML = `
-                <div>There is a cache here at "${cache.cell.i},${cache.cell.j}". It contains <span id="value">${cache.coins.length}</span> coins. <span id="inventory"><h3>Cache's Current Inventory</h3>\n${
-      printInventory(cache.coins)
-    }</span></div>
-                <button id="add">Deposit Coins</button>
-                <button id="sub">Withdraw Coins</button>
-                `;
-    // Deposit coins into the cache and remove them from the player's wallet when the add button is clicked.
-    popupDiv
-      .querySelector<HTMLButtonElement>("#add")!
-      .addEventListener("click", () => {
-        if (playerWallet.length > 0) {
-          deposit(playerWallet[playerWallet.length - 1], cache);
-          statusPanel.innerHTML =
-            `${playerWallet.length} points currently, player deposited coin: `;
-          refreshCacheTooltip(
-            cache,
-            popupDiv,
-            cache.coins[cache.coins.length - 1],
-          );
-        }
-      });
-    // Remove coins from the cache and add them to the player's wallet when the add button is clicked.
-    popupDiv
-      .querySelector<HTMLButtonElement>("#sub")!
-      .addEventListener("click", () => {
-        if (cache.coins.length > 0) {
-          collect(cache.coins[cache.coins.length - 1], cache);
-          statusPanel.innerHTML =
-            `${playerWallet.length} points currently, player picked up coin: `;
-          refreshCacheTooltip(
-            cache,
-            popupDiv,
-            playerWallet[playerWallet.length - 1],
-          );
-        }
-      });
-    return popupDiv;
-  });
-}
-// Refreshes the cache's tooltip to reflect its inventory after a transaction.
-function refreshCacheTooltip(
-  cache: Cache,
-  popupDiv: HTMLDivElement,
-  coin: Coin,
-) {
-  popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = cache
-    .coins.length.toString();
-  popupDiv.querySelector<HTMLSpanElement>("#inventory")!.innerHTML =
-    `<h3>Cache's Current Inventory</h3>\n${printInventory(cache.coins)}`;
-  statusPanel.innerHTML += `${coin.serial}`;
-  inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
-    printInventory(playerWallet)
-  }`;
-}
-// Create a representation of a new cache object on the map.
-function spawnCache(cache: Cache) {
-  // Calculate the starting number of coins for each cache.
-  const totalCoins = Math.floor(
-    luck([cache.cell.i, cache.cell.j, "initialValue"].toString()) * 100,
-  );
-  // Make and deposit that many coins into the cache
-  for (let i = 0; i < totalCoins; i++) {
-    makeCoin(cache);
-  }
-  drawCache(cache);
-  seenCaches.push(cache.toMemento());
-}
 // Generate initial caches.
 document.dispatchEvent(playerMoved);
