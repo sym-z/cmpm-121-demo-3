@@ -1,26 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-</head>
-<!--Brace helped me figure out how to use HTML symbols to get past the arrow emojis not appearing.-->
-<body>
-  <div id="app">
-    <div id="controlPanel">
-      <button id="sensor" title="sensor">🌝</button>
-      <button id="north" title="north">&uarr;</button>
-      <button id="south" title="south">&darr;</button>
-      <button id="west" title="west">&larr;</button>
-      <button id="east" title="east">&rarr;</button>
-      <button id="reset" title="reset">🚮</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <!--Brace helped me figure out how to use HTML symbols to get past the arrow emojis not appearing.-->
+  <body>
+    <div id="app">
+      <div id="controlPanel">
+        <button id="sensor" title="sensor">🌝</button>
+        <button id="north" title="north">&uarr;</button>
+        <button id="south" title="south">&darr;</button>
+        <button id="west" title="west">&larr;</button>
+        <button id="east" title="east">&rarr;</button>
+        <button id="reset" title="reset">🚮</button>
+      </div>
+      <div id="statusPanel"></div>
+      <div id="inventoryPanel"></div>
+      <div id="map"></div>
     </div>
-    <div id="statusPanel"></div>
-    <div id="inventoryPanel"></div>
-    <div id="map"></div>
-  </div>
-  <script type="module" src="/src/main.ts"></script>
-</body>
-
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

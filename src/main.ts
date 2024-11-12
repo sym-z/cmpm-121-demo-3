@@ -88,17 +88,21 @@ class Cache {
     this.coins.push(coin);
   }
   // Refreshes the cache's tooltip to reflect its inventory after a transaction.
-  refreshCacheTooltip(
-    popupDiv: HTMLDivElement,
-    coin: Coin,
-  ) {
-    popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = this
-      .coins.length.toString();
-    popupDiv.querySelector<HTMLSpanElement>("#inventory")!.innerHTML =
-      `<h3>Cache's Current Inventory</h3>\n${printInventory(this.coins)}`;
+  refreshCacheTooltip(popupDiv: HTMLDivElement, coin: Coin) {
+    popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = this.coins
+      .length.toString();
+    popupDiv.querySelector<HTMLSpanElement>(
+      "#inventory",
+    )!.innerHTML = `<h3>Cache's Current Inventory</h3>\n${
+      printInventory(
+        this.coins,
+      )
+    }`;
     statusPanel.innerHTML += `${coin.serial}`;
     inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
-      printInventory(playerWallet)
+      printInventory(
+        playerWallet,
+      )
     }`;
   }
   // Draws a Cache to the screen
@@ -114,7 +118,9 @@ class Cache {
       const popupDiv = document.createElement("div");
       popupDiv.innerHTML = `
                 <div>There is a cache here at "${this.cell.i},${this.cell.j}". It contains <span id="value">${this.coins.length}</span> coins. <span id="inventory"><h3>Cache's Current Inventory</h3>\n${
-        printInventory(this.coins)
+        printInventory(
+          this.coins,
+        )
       }</span></div>
                 <button id="add">Deposit Coins</button>
                 <button id="sub">Withdraw Coins</button>
@@ -229,11 +235,18 @@ function refreshCacheLocations() {
     }
   }
 }
+// Attach a polyline to follow the player's movements.
+const playerTraceLine: leaflet.polyline = leaflet
+  .polyline([], { color: "red" })
+  .addTo(map);
 // Triggers when a player changes cell.
 const playerMoved = new Event("player-moved");
 document.addEventListener("player-moved", () => {
   refreshPlayerLocation();
   refreshCacheLocations();
+  playerTraceLine.addLatLng(
+    new leaflet.latLng(playerCoordLocation.lat, playerCoordLocation.lng),
+  );
 });
 
 // Movement Button Behavior
@@ -279,7 +292,9 @@ const inventoryPanel = document.querySelector<HTMLDivElement>(
   "#inventoryPanel",
 )!;
 inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
-  printInventory(playerWallet)
+  printInventory(
+    playerWallet,
+  )
 }`;
 
 // Generate initial caches.
