@@ -137,6 +137,7 @@ class Cache {
               popupDiv,
               this.coins[this.coins.length - 1],
             );
+            saveData();
           }
         });
       // Remove coins from the cache and add them to the player's wallet when the add button is clicked.
@@ -152,6 +153,7 @@ class Cache {
               playerWallet[playerWallet.length - 1],
             );
           }
+          saveData();
         });
       return popupDiv;
     });
@@ -176,7 +178,7 @@ class Cache {
 const board: Board = new Board(TILE_DEGREES, NEIGHBORHOOD_SIZE);
 
 // This location will eventually be updated based on the user's real location, for now the player will always start at the Oakes Classroom
-const playerCoordLocation = OAKES_CLASSROOM;
+let playerCoordLocation = OAKES_CLASSROOM;
 // Create a cell representation of the player's location
 let playerCellLocation: Cell = board.getCellForPoint(playerCoordLocation);
 // Add a marker to represent the player, keep track of their location and what coins are in their wallet.
@@ -185,7 +187,7 @@ playerMarker.bindTooltip(
   `You are currently located at: ${playerCellLocation.i}, ${playerCellLocation.j}`,
 );
 playerMarker.addTo(map);
-const playerWallet: Coin[] = [];
+let playerWallet: Coin[] = [];
 
 function refreshPlayerLocation() {
   playerMarker.remove();
@@ -207,7 +209,7 @@ function clearRectangles() {
   }
 }
 // The memento strings of all seen Caches.
-const seenCaches: string[] = [];
+let seenCaches: string[] = [];
 // Redraws all caches to the screen
 // Got a bit of help from Brace on some syntax for how I declared currCache so I implemented Flyweight effectively still.
 function refreshCacheLocations() {
@@ -247,6 +249,7 @@ document.addEventListener("player-moved", () => {
   playerTraceLine.addLatLng(
     new leaflet.latLng(playerCoordLocation.lat, playerCoordLocation.lng),
   );
+  saveData();
 });
 
 // Prints the current state of a coin array, could be the players wallet or a cache, in a scroll box.
@@ -317,9 +320,65 @@ resetButton.addEventListener("click", () => {
   resetCoins();
   // Refresh all nearby caches
   refreshCacheLocations();
-  // Erase the player's movement history by clearing all points in the polyline.
-  playerTraceLine.setLatLngs([]);
+  // Erase the player's movement history by clearing all points in the polyline except for their current location.
+  playerTraceLine.setLatLngs([{
+    lat: playerCoordLocation.lat,
+    lng: playerCoordLocation.lng,
+  }]);
+  // Save the state of the game after the reset button is pressed.
+  saveData();
 });
 
-// Start the application by generating the initial caches.
-document.dispatchEvent(playerMoved);
+function saveData() {
+  // Current location
+  localStorage.setItem(
+    "playerCoordLocation",
+    JSON.stringify(playerCoordLocation),
+  );
+  // Polyline
+  localStorage.setItem(
+    "playerTraceLine",
+    JSON.stringify(playerTraceLine.getLatLngs()),
+  );
+  // Wallet
+  localStorage.setItem("playerWallet", JSON.stringify(playerWallet));
+  // Seen Caches (Mementos)
+  localStorage.setItem("seenCaches", JSON.stringify(seenCaches));
+  // Status Panel string
+  localStorage.setItem("status", JSON.stringify(statusPanel.innerHTML));
+}
+
+function loadData() {
+  if (localStorage.getItem("playerCoordLocation")) {
+    playerCoordLocation = JSON.parse(
+      localStorage.getItem("playerCoordLocation")!,
+    ) as leaflet.latLng;
+    refreshPlayerLocation();
+  }
+  if (localStorage.getItem("playerTraceLine")) {
+    playerTraceLine.setLatLngs(
+      JSON.parse(localStorage.getItem("playerTraceLine")!) as leaflet.latLng[],
+    );
+  } else {
+    // Start with a fresh traceline at the player's location.
+    document.dispatchEvent(playerMoved);
+  }
+  if (localStorage.getItem("playerWallet")) {
+    playerWallet = JSON.parse(localStorage.getItem("playerWallet")!) as Coin[];
+    inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
+      printInventory(
+        playerWallet,
+      )
+    }`;
+  }
+  if (localStorage.getItem("seenCaches")) {
+    seenCaches = JSON.parse(localStorage.getItem("seenCaches")!) as string[];
+    refreshCacheLocations();
+  }
+  if (localStorage.getItem("status")) {
+    statusPanel.innerHTML = JSON.parse(
+      localStorage.getItem("status")!,
+    ) as string;
+  }
+}
+loadData();
