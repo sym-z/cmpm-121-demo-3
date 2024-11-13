@@ -300,6 +300,40 @@ eastButton.addEventListener("click", () => {
   document.dispatchEvent(playerMoved);
 });
 
+let watchID: number | null = null;
+function trackLocation() {
+  if ("geolocation" in navigator) {
+    watchID = navigator.geolocation.watchPosition(
+      (position) => {
+        console.log("New Position: ", position.coords);
+        playerCoordLocation.lat = position.coords.latitude;
+        playerCoordLocation.lng = position.coords.longitude;
+        console.log("Updated player location: ", playerCoordLocation);
+        document.dispatchEvent(playerMoved);
+      },
+      (error) => console.error("Error watching position: ", error),
+      { enableHighAccuracy: false },
+    );
+  } else {
+    console.error("Geolocation unavailable in this browser.");
+  }
+}
+function stopTracking() {
+  if (watchID !== null) {
+    navigator.geolocation.clearWatch(watchID);
+    watchID = null;
+  }
+}
+const sensorButton = document.getElementById("sensor")!;
+sensorButton.addEventListener("click", () => {
+  if (watchID == null) {
+    // Erase the player's movement history by clearing all points in the polyline except for their current location.
+    playerTraceLine.setLatLngs([]);
+    trackLocation();
+  } else {
+    stopTracking();
+  }
+});
 // Move all coins to their original caches and empty the player's wallet.
 function resetCoins() {
   // Erase all mementos
@@ -381,4 +415,5 @@ function loadData() {
     ) as string;
   }
 }
+
 loadData();
