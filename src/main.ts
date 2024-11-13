@@ -105,6 +105,53 @@ class Cache {
       )
     }`;
   }
+  // Creates Cache Popups. These two functions were suggested by Brace to simplify my draw function and separate its PopUp creation code.
+  private createPopupContent(): HTMLDivElement {
+    const popupDiv = document.createElement("div");
+    popupDiv.innerHTML = `
+                <div>There is a cache here at "${this.cell.i},${this.cell.j}". It contains <span id="value">${this.coins.length}</span> coins. <span id="inventory"><h3>Cache's Current Inventory</h3>\n${
+      printInventory(
+        this.coins,
+      )
+    }</span></div>
+                <button id="add">Deposit Coins</button>
+                <button id="sub">Withdraw Coins</button>
+                `;
+    return popupDiv;
+  }
+  // Refreshes Cache Popups.
+  private bindPopupEvents(popupDiv: HTMLDivElement) {
+    // Deposit coins into the cache and remove them from the player's wallet when the add button is clicked.
+    popupDiv
+      .querySelector<HTMLButtonElement>("#add")!
+      .addEventListener("click", () => {
+        if (playerWallet.length > 0) {
+          this.deposit(playerWallet[playerWallet.length - 1]);
+          statusPanel.innerHTML =
+            `${playerWallet.length} points currently, player deposited coin: `;
+          this.refreshCacheTooltip(
+            popupDiv,
+            this.coins[this.coins.length - 1],
+          );
+          saveData();
+        }
+      });
+    // Remove coins from the cache and add them to the player's wallet when the add button is clicked.
+    popupDiv
+      .querySelector<HTMLButtonElement>("#sub")!
+      .addEventListener("click", () => {
+        if (this.coins.length > 0) {
+          this.withdraw(this.coins[this.coins.length - 1]);
+          statusPanel.innerHTML =
+            `${playerWallet.length} points currently, player picked up coin: `;
+          this.refreshCacheTooltip(
+            popupDiv,
+            playerWallet[playerWallet.length - 1],
+          );
+        }
+        saveData();
+      });
+  }
   // Draws a Cache to the screen
   draw() {
     // Create a border around the cache on the map.
@@ -114,47 +161,8 @@ class Cache {
     drawnRectangles.push(rect);
     // Each cache's popup behavior.
     rect.bindPopup(() => {
-      // The popup offers a description and button
-      const popupDiv = document.createElement("div");
-      popupDiv.innerHTML = `
-                <div>There is a cache here at "${this.cell.i},${this.cell.j}". It contains <span id="value">${this.coins.length}</span> coins. <span id="inventory"><h3>Cache's Current Inventory</h3>\n${
-        printInventory(
-          this.coins,
-        )
-      }</span></div>
-                <button id="add">Deposit Coins</button>
-                <button id="sub">Withdraw Coins</button>
-                `;
-      // Deposit coins into the cache and remove them from the player's wallet when the add button is clicked.
-      popupDiv
-        .querySelector<HTMLButtonElement>("#add")!
-        .addEventListener("click", () => {
-          if (playerWallet.length > 0) {
-            this.deposit(playerWallet[playerWallet.length - 1]);
-            statusPanel.innerHTML =
-              `${playerWallet.length} points currently, player deposited coin: `;
-            this.refreshCacheTooltip(
-              popupDiv,
-              this.coins[this.coins.length - 1],
-            );
-            saveData();
-          }
-        });
-      // Remove coins from the cache and add them to the player's wallet when the add button is clicked.
-      popupDiv
-        .querySelector<HTMLButtonElement>("#sub")!
-        .addEventListener("click", () => {
-          if (this.coins.length > 0) {
-            this.withdraw(this.coins[this.coins.length - 1]);
-            statusPanel.innerHTML =
-              `${playerWallet.length} points currently, player picked up coin: `;
-            this.refreshCacheTooltip(
-              popupDiv,
-              playerWallet[playerWallet.length - 1],
-            );
-          }
-          saveData();
-        });
+      const popupDiv = this.createPopupContent();
+      this.bindPopupEvents(popupDiv);
       return popupDiv;
     });
   }

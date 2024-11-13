@@ -4,16 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   </head>
-  <!--Brace helped me figure out how to use HTML symbols to get past the arrow emojis not appearing.-->
+  <!--Using Unicode symbols for the emojis to make the representation more consistent across browsers.-->
+  <!--Brace originally helped me use HTML symbols, but when I found out I could use unicode, I refactored this section.-->
   <body>
     <div id="app">
       <div id="controlPanel">
-        <button id="sensor" title="sensor">🌝</button>
-        <button id="north" title="north">&uarr;</button>
-        <button id="south" title="south">&darr;</button>
-        <button id="west" title="west">&larr;</button>
-        <button id="east" title="east">&rarr;</button>
-        <button id="reset" title="reset">🚮</button>
+        <button id="sensor" title="sensor">&#x1F310;</button>
+        <button id="north" title="north">&#x2B06;</button>
+        <button id="south" title="south">&#x2B07;</button>
+        <button id="west" title="west">&#x2B05;</button>
+        <button id="east" title="east">&#x27A1;</button>
+        <button id="reset" title="reset">&#x1F6AE;</button>
       </div>
       <div id="statusPanel"></div>
       <div id="inventoryPanel"></div>
