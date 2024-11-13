@@ -249,29 +249,6 @@ document.addEventListener("player-moved", () => {
   );
 });
 
-// Movement Button Behavior
-const northButton = document.getElementById("north")!;
-const southButton = document.getElementById("south")!;
-const westButton = document.getElementById("west")!;
-const eastButton = document.getElementById("east")!;
-
-northButton.addEventListener("click", () => {
-  playerCoordLocation.lat += TILE_DEGREES;
-  document.dispatchEvent(playerMoved);
-});
-southButton.addEventListener("click", () => {
-  playerCoordLocation.lat -= TILE_DEGREES;
-  document.dispatchEvent(playerMoved);
-});
-westButton.addEventListener("click", () => {
-  playerCoordLocation.lng -= TILE_DEGREES;
-  document.dispatchEvent(playerMoved);
-});
-eastButton.addEventListener("click", () => {
-  playerCoordLocation.lng += TILE_DEGREES;
-  document.dispatchEvent(playerMoved);
-});
-
 // Prints the current state of a coin array, could be the players wallet or a cache, in a scroll box.
 function printInventory(coins: Coin[]) {
   let inventoryString: string =
@@ -297,5 +274,52 @@ inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
   )
 }`;
 
-// Generate initial caches.
+// Movement Button Behavior
+const northButton = document.getElementById("north")!;
+const southButton = document.getElementById("south")!;
+const westButton = document.getElementById("west")!;
+const eastButton = document.getElementById("east")!;
+
+northButton.addEventListener("click", () => {
+  playerCoordLocation.lat += TILE_DEGREES;
+  document.dispatchEvent(playerMoved);
+});
+southButton.addEventListener("click", () => {
+  playerCoordLocation.lat -= TILE_DEGREES;
+  document.dispatchEvent(playerMoved);
+});
+westButton.addEventListener("click", () => {
+  playerCoordLocation.lng -= TILE_DEGREES;
+  document.dispatchEvent(playerMoved);
+});
+eastButton.addEventListener("click", () => {
+  playerCoordLocation.lng += TILE_DEGREES;
+  document.dispatchEvent(playerMoved);
+});
+
+// Move all coins to their original caches and empty the player's wallet.
+function resetCoins() {
+  // Erase all mementos
+  seenCaches.splice(0, seenCaches.length);
+  // Clear player's inventory
+  playerWallet.splice(0, playerWallet.length);
+  // Update player wallet text
+  statusPanel.innerHTML = "No points yet...";
+  inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
+    printInventory(
+      playerWallet,
+    )
+  }`;
+}
+const resetButton = document.getElementById("reset")!;
+resetButton.addEventListener("click", () => {
+  // Reset state of all coins
+  resetCoins();
+  // Refresh all nearby caches
+  refreshCacheLocations();
+  // Erase the player's movement history by clearing all points in the polyline.
+  playerTraceLine.setLatLngs([]);
+});
+
+// Start the application by generating the initial caches.
 document.dispatchEvent(playerMoved);
