@@ -301,14 +301,13 @@ eastButton.addEventListener("click", () => {
 });
 
 let watchID: number | null = null;
+// Help from Brace on syntax.
 function trackLocation() {
   if ("geolocation" in navigator) {
     watchID = navigator.geolocation.watchPosition(
       (position) => {
-        console.log("New Position: ", position.coords);
         playerCoordLocation.lat = position.coords.latitude;
         playerCoordLocation.lng = position.coords.longitude;
-        console.log("Updated player location: ", playerCoordLocation);
         document.dispatchEvent(playerMoved);
       },
       (error) => console.error("Error watching position: ", error),
@@ -330,8 +329,10 @@ sensorButton.addEventListener("click", () => {
     // Erase the player's movement history by clearing all points in the polyline except for their current location.
     playerTraceLine.setLatLngs([]);
     trackLocation();
+    sensorButton.classList.add("active");
   } else {
     stopTracking();
+    sensorButton.classList.remove("active");
   }
 });
 // Move all coins to their original caches and empty the player's wallet.
@@ -363,6 +364,7 @@ resetButton.addEventListener("click", () => {
   saveData();
 });
 
+// Help from Brace on syntax.
 function saveData() {
   // Current location
   localStorage.setItem(

@@ -68,7 +68,11 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
-
+/* Help from Brace on how to use a style class for the button */
+button.active {
+  background-color: #0000aa;
+  border: 3px solid #aa0000;
+}
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
