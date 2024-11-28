@@ -299,23 +299,25 @@ const northButton = document.getElementById("north")!;
 const southButton = document.getElementById("south")!;
 const westButton = document.getElementById("west")!;
 const eastButton = document.getElementById("east")!;
+// Helper function to bind movement buttons
+function bindMovementButton(
+  button: HTMLElement,
+  latDelta: number,
+  lngDelta: number,
+) {
+  button.addEventListener("click", () => {
+    playerCoordLocation.lat += latDelta;
+    playerCoordLocation.lng += lngDelta;
+    document.dispatchEvent(playerMoved);
+  });
+}
 
-northButton.addEventListener("click", () => {
-  playerCoordLocation.lat += TILE_DEGREES;
-  document.dispatchEvent(playerMoved);
-});
-southButton.addEventListener("click", () => {
-  playerCoordLocation.lat -= TILE_DEGREES;
-  document.dispatchEvent(playerMoved);
-});
-westButton.addEventListener("click", () => {
-  playerCoordLocation.lng -= TILE_DEGREES;
-  document.dispatchEvent(playerMoved);
-});
-eastButton.addEventListener("click", () => {
-  playerCoordLocation.lng += TILE_DEGREES;
-  document.dispatchEvent(playerMoved);
-});
+// Brace Coupling and Cohesion suggestion.
+// Use the helper to bind all four movement buttons
+bindMovementButton(northButton, TILE_DEGREES, 0); // Move North
+bindMovementButton(southButton, -TILE_DEGREES, 0); // Move South
+bindMovementButton(westButton, 0, -TILE_DEGREES); // Move West
+bindMovementButton(eastButton, 0, TILE_DEGREES); // Move East
 
 let watchID: number | null = null;
 // Help from Brace on syntax.
