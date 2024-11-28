@@ -87,8 +87,7 @@ class Cache {
     };
     this.coins.push(coin);
   }
-  // Refreshes the cache's tooltip to reflect its inventory after a transaction.
-  refreshCacheTooltip(popupDiv: HTMLDivElement, coin: Coin) {
+  private updateCacheInventory(popupDiv: HTMLElement) {
     popupDiv.querySelector<HTMLSpanElement>("#value")!.innerHTML = this.coins
       .length.toString();
     popupDiv.querySelector<HTMLSpanElement>(
@@ -98,12 +97,22 @@ class Cache {
         this.coins,
       )
     }`;
+  }
+  private updateStatusPanel(coin: Coin) {
     statusPanel.innerHTML += `${coin.serial}`;
+  }
+  private updatePlayerInventory() {
     inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
       printInventory(
         playerWallet,
       )
     }`;
+  }
+  // Refreshes the cache's tooltip to reflect its inventory after a transaction.
+  refreshCacheTooltip(popupDiv: HTMLDivElement, coin: Coin) {
+    this.updateCacheInventory(popupDiv);
+    this.updateStatusPanel(coin);
+    this.updatePlayerInventory();
   }
   // Creates Cache Popups. These two functions were suggested by Brace to simplify my draw function and separate its PopUp creation code.
   private createPopupContent(): HTMLDivElement {
