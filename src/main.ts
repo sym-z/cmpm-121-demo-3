@@ -106,6 +106,7 @@ class Cache {
       )
     }`;
   }
+  // Brace Helped with this Coupling and Cohesion Fix
   private updateStatusPanel(coin: Coin) {
     statusPanel.innerHTML += `${coin.serial}`;
   }
