@@ -19,6 +19,14 @@ const CACHE_SPAWN_PROBABILITY = 0.1;
 // Calculates the amount of coins in each Cache, using the luck() function.
 const CACHE_COIN_SIZE_MULTIPLIER = 100;
 
+// Coupling and Cohesion suggestion from Brace.
+// SERIALIZATION CONSTANTS
+const SERIAL_DELIMITER = "#";
+
+// UI CONSTANTS
+const PLAYER_INVENTORY_TITLE = "<h3>Player's Current Inventory</h3>";
+const CACHE_INVENTORY_TITLE = "<h3>Cache's Current Inventory</h3>";
+
 const map = leaflet.map(document.getElementById("map")!, {
   center: OAKES_CLASSROOM,
   zoom: GAMEPLAY_ZOOM_LEVEL,
@@ -30,7 +38,7 @@ const map = leaflet.map(document.getElementById("map")!, {
 
 leaflet
   .tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
+    maxZoom: GAMEPLAY_ZOOM_LEVEL,
     attribution:
       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   })
@@ -80,7 +88,7 @@ class Cache {
   // Makes a coin and deposits it into a cache
   makeCoin() {
     const serialNumber: string =
-      `${this.cell.i}:${this.cell.j}#${this.coins.length}`;
+      `${this.cell.i}:${this.cell.j}${SERIAL_DELIMITER}${this.coins.length}`;
     const coin: Coin = {
       cell: this.cell,
       serial: serialNumber,
@@ -92,7 +100,7 @@ class Cache {
       .length.toString();
     popupDiv.querySelector<HTMLSpanElement>(
       "#inventory",
-    )!.innerHTML = `<h3>Cache's Current Inventory</h3>\n${
+    )!.innerHTML = `${CACHE_INVENTORY_TITLE}\n${
       printInventory(
         this.coins,
       )
@@ -102,7 +110,7 @@ class Cache {
     statusPanel.innerHTML += `${coin.serial}`;
   }
   private updatePlayerInventory() {
-    inventoryPanel.innerHTML = `<h3>Player's Current Inventory</h3>\n${
+    inventoryPanel.innerHTML = `${PLAYER_INVENTORY_TITLE}\n${
       printInventory(
         playerWallet,
       )
